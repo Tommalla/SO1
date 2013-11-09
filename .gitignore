@@ -1,3 +1,8 @@
+release
+*.kdev4
+executor
+manager
+
 # Object files
 *.o
 *.ko
