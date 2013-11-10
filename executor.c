@@ -3,13 +3,14 @@
  */
 #include "common.h"
 #include <stdio.h>
+#include <unistd.h>
 
 char input[INPUT_SIZE];
 char output[INPUT_SIZE];
 
 int main() {
 	while (1) {
-		gets(input);
+		//TODO: fix this to readInput
 		if (input[0] == '#') {
 			puts("#");
 			return 0;
@@ -18,6 +19,8 @@ int main() {
 		calc(input, output);
 		puts(output);
 	}
+
+	close (STDIN_FILENO);
 
 	return 0;
 }
