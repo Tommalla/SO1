@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/wait.h>
 #include "common.h"
 #include "err.h"
 
@@ -18,6 +19,8 @@ int main(const int argc, const char** argv) {
 	int n, qty, num, s, t, u, m;
 	FILE* inFile;
 	FILE* outFile;
+	int pipe_dsc[2][2];
+	int i;
 
 	if (argc != 4)
 		syserr("Wrong number of arguments!\n%s", usage);
@@ -28,14 +31,14 @@ int main(const int argc, const char** argv) {
 	if ((inFile = fopen(strcat(input, argv[2]), "r")) == NULL)
 		syserr("Error opening input file %s!\n", input);
 
+	//opening the outFile here, even though we're writing at the end because if
+	//it's impossible to open the file, it should fail before the calculations
 	strcpy(input, "DATA/");
 	if ((outFile = fopen(strcat(input, argv[3]), "w")) == NULL)
 		syserr("Error opening output file %s\n", input);
 
 
-	//TODO create the ring
-	int pipe_dsc[2][2];
-	int i;
+	//create the ring
 
 	if (pipe(pipe_dsc[1]) == -1)
 		syserr("Error in pipe for manager\n");
@@ -70,27 +73,33 @@ int main(const int argc, const char** argv) {
 	if (dup2(pipe_dsc[1][0], STDIN_FILENO) == -1)
 		syserr("Error in dup stdin for manager\n");
 
-	fscanf(inFile, "%d\n", &num);
+	if (fscanf(inFile, "%d\n", &num) == 0)
+		syserr("Error while reading number of expressions from the input file!\n");
 	qty = 0;
-	fprintf(stderr, "num: %d\n", num);
+
+	if (debug)
+		fprintf(stderr, "Number of expressions to calculate: %d\n", num);
 
 	for (i = 0; i < num || qty > 0;) {
 		while (qty >= n || (i >= num && qty > 0)) {	//already n data chunks in the ring
+			//hang up on reading (wait for the next chunk)
 			readInput(input);
 			s = strlen(input);
 
-			//if a chunk is finished
-			m = 1;
-			u = 0;
-			for (t = s - 2; t >= 0; --t)
+			//analyze the input data:
+			for (t = s - 2, m = 1, u = 0; t >= 0; --t)
 				if (input[t] < '0' || input[t] > '9') {
 					if ((input[t] == ' ' && input[t - 1] == ':') || input[t] == '-') {
+						//if a chunk is finished
 						input[t-1] = '\0';
-						res[atoi(input)] = u * (input[t] == '-' ? -1 : 1);
+						m = atoi(input);
+						res[m] = u * (input[t] == '-' ? -1 : 1);	//save the result
 						--qty;
-						fprintf(stderr, "Written!\n");
+						if (debug)
+							fprintf(stderr, "Manager: Saved the result of %d expr: %d\n", m, res[m]);
 					} else
-						write(STDOUT_FILENO, input, s);
+						if (write(STDOUT_FILENO, input, s) == -1)
+							syserr("Error while writing to the first pipe [manager]!\n");
 
 					break;
 				} else {
@@ -100,9 +109,11 @@ int main(const int argc, const char** argv) {
 		}
 
 		if (i < num) {
-			fgets(input, INPUT_SIZE, inFile);
-			sprintf(output, "%d: %s\n", i, input);
-			write(STDOUT_FILENO, output, strlen(output) - 1);
+			if (fgets(input, INPUT_SIZE, inFile) == NULL)
+				syserr("Error while reading line %d [manager]\n", i);
+			sprintf(output, "%d: %s\n", i, input);	//FIXME remove the space
+			if (write(STDOUT_FILENO, output, strlen(output) - 1) == -1)
+				syserr("Error while writing the line %d to the pipe [manager]\n", i);
 			++qty;
 		}
 
@@ -110,12 +121,15 @@ int main(const int argc, const char** argv) {
 			++i;
 	}
 
-	write(STDOUT_FILENO, "#\n", 2);
+	//tell the ring to close
+	if (write(STDOUT_FILENO, "#\n", 2) == -1)
+		syserr("Error while writing kill command to the pipe [manager]\n");
 
+	//write the results to file
 	for (i = 0; i < num; ++i)
 		fprintf(outFile, "%d: %d\n", i + 1, res[i]);
 
-	//close everything
+	//close everything, wait for the children to end etc
 	fclose(inFile);
 	fclose(outFile);
 

@@ -32,9 +32,11 @@ void calc(const char* input, char* output) {
 	char buffer[BUFSIZ];
 	int n, i, j, k, m, mul;
 	int args[2];
-	char op;
 
 	n = strlen(input);
+
+	if (debug)
+		fprintf(stderr, "Analyzing: %s[length=%d]\n", input, n);
 
 	for (i = 0; i < n - 1; ++i)	//find the first operator
 		if (('0' > input[i] || input[i] > '9') && input[i] != ' ' && input[i] != ':' &&
@@ -48,15 +50,15 @@ void calc(const char* input, char* output) {
 
 	m = i;
 
-	fprintf(stderr, "Analyzing: %s[length = %d]\n", input, n);
-	fprintf(stderr, "First operator at: %d\n", i);
+	if (debug)
+		fprintf(stderr, "First operator (%c) at: %d\n", input[m], m);
 
-	//copy everything before and including ';'
+	//copy everything before and including ';' and one space after
 	for (j = 0; j < n && input[j] != ':'; ++j)
 		output[j] = input[j];
 
-	output[j++] = input[j - 1]; //happy debugging
-	output[j++] = input[j - 1];
+	for (k = 0; k < 2; ++k, ++j)
+		output[j] = input[j];
 	//now j points to the beginning of the expression
 
 	for (k = 1; k >= 0; --k) {
@@ -92,17 +94,25 @@ void calc(const char* input, char* output) {
 			break;
 	}
 
-	fprintf(stderr, "%d %d %d %d, operands: %d %d\n", i, j, k, m, args[0], args[1]);
+	if (debug)
+		fprintf(stderr, "i = %d j = %d k = %d m = %d, operands: %d %d\n", i, j, k, m, args[0], args[1]);
 
 	sprintf(buffer, "%d", k);
 	k = strlen(buffer);
-	fprintf(stderr, "%c result: %s\n", input[m], buffer);
-	//copy j - i, then buffer, then m + 1 - end
+	//the operation result is now in buffer
 
-	fprintf(stderr, "%d %d %d\n", i, j, m);
+	if (debug) {
+		fprintf(stderr, "result: %s\n", buffer);
+		fprintf(stderr, "%d %d %d\n", i, j, m);
+	}
 
+	//copy everything between ':' and the beginning of the result
 	memcpy(output + j, input + j, i - j);
+	//copy the result
 	memcpy(output + i, buffer, k);
+	//copy the rest (with '\0' at the end!)
 	memcpy(output + i + k, input + m + 1, strlen(input) - m);
-	fprintf(stderr, "output: %s\n", output);
+
+	if (debug)
+		fprintf(stderr, "output: %s\n", output);
 }
