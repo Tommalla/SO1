@@ -4,20 +4,22 @@
 #include "common.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 char input[INPUT_SIZE];
 char output[INPUT_SIZE];
 
 int main() {
 	while (1) {
-		//TODO: fix this to readInput
+		readInput(input);
 		if (input[0] == '#') {
-			puts("#");
+			while (write(STDOUT_FILENO, "#\n", 2) == -1);
 			return 0;
 		}
 
+		fprintf(stderr, "Read: %s\n", input);
 		calc(input, output);
-		puts(output);
+		write(STDOUT_FILENO, output, strlen(output));
 	}
 
 	close (STDIN_FILENO);
