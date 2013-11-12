@@ -15,19 +15,20 @@ int main() {
 		readInput(input);
 		if (input[0] == '#') {
 			if (write(STDOUT_FILENO, "#\n", 2) == -1)
-				syserr("Error while passing the kill command [executor]\n");
+				syserr("Error while passing the kill command [executor %d]\n", getpid());
 			return 0;
 		}
 
 		if (debug)
-			fprintf(stderr, "Executor: Read: %s\n", input);
+			fprintf(stderr, "Executor %d: Read: %s\n", getpid(), input);
 
 		calc(input, output);
 		if (write(STDOUT_FILENO, output, strlen(output)) == -1)
-			syserr("Error while passing the results through pipe [executor]\n");
+			syserr("Error while passing the results through pipe [executor %d]\n", getpid());
 	}
 
-	close (STDIN_FILENO);
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
 
 	return 0;
 }

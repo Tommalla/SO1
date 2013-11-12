@@ -135,5 +135,8 @@ int main(const int argc, const char** argv) {
 
 	for (i = 0; i < n; ++i)
 		wait(0);
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
 	return 0;
 }
