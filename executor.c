@@ -16,7 +16,7 @@ int main() {
 		if (input[0] == '#') {
 			if (write(STDOUT_FILENO, "#\n", 2) == -1)
 				syserr("Error while passing the kill command [executor %d]\n", getpid());
-			return 0;
+			break;
 		}
 
 		if (debug)
@@ -27,8 +27,9 @@ int main() {
 			syserr("Error while passing the results through pipe [executor %d]\n", getpid());
 	}
 
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
+	//FIXME this is done automatically
+	//close(STDIN_FILENO);
+	//close(STDOUT_FILENO);
 
 	return 0;
 }

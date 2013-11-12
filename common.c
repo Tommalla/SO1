@@ -8,7 +8,7 @@ void reread(char* buffer, size_t* size, int* id) {
 	*id = 0;
 }
 
-void readInput(char* output) {
+void readInput(char* output) {	//FIXME can use '\0' as the delimiter
 	static char buffer[BUFSIZ];
 	static int id = 0;
 	static size_t size = 0;
