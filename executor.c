@@ -26,10 +26,6 @@ int main() {
 		if (write(STDOUT_FILENO, output, strlen(output)) == -1)
 			syserr("Error while passing the results through pipe [executor %d]\n", getpid());
 	}
-
-	//FIXME this is done automatically
-	//close(STDIN_FILENO);
-	//close(STDOUT_FILENO);
-
+	
 	return 0;
 }

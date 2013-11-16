@@ -31,7 +31,7 @@ int main(const int argc, const char** argv) {
 	if ((inFile = fopen(strcat(input, argv[2]), "r")) == NULL)
 		syserr("Error opening input file %s!\n", input);
 
-	//opening the outFile here, even though we're writing at the end because if
+	//opening the outFile here, even though we're writing at the end, because if
 	//it's impossible to open the file, it should fail before the calculations
 	strcpy(input, "DATA/");
 	if ((outFile = fopen(strcat(input, argv[3]), "w")) == NULL)
@@ -47,17 +47,22 @@ int main(const int argc, const char** argv) {
 		syserr("Error in dup stdout for manager\n");
 
 	for (i = 0; i < n; ++i) {
+		//'rotate' pipes
 		pipe_dsc[0][0] = pipe_dsc[1][0];
 		pipe_dsc[0][1] = pipe_dsc[1][1];
 
+		//create the next pipe
 		if (pipe(pipe_dsc[1]) == -1)
 			syserr("Error in pipe for executor #%d\n", i);
 
+		//create the i-th executor
 		switch (fork()) {
 			case -1:
 				syserr("Error in fork for executor #%d\n", i);
 				break;
 			case 0:
+				close(pipe_dsc[0][1]);
+				close(pipe_dsc[1][0]);
 				if (dup2(pipe_dsc[0][0], STDIN_FILENO) == -1)
 					syserr("Error in dup stdin for executor %d\n", i);
 
@@ -68,11 +73,17 @@ int main(const int argc, const char** argv) {
 				syserr("Error in execl for executor #%d\n", i);
 				break;
 		}
+
+		//close pipes we won't be using anymore (already copied by the last child)
+		close(pipe_dsc[0][0]);
+		close(pipe_dsc[0][1]);
 	}
 
+	//connect the n-1 -th executor to manager's input
 	if (dup2(pipe_dsc[1][0], STDIN_FILENO) == -1)
 		syserr("Error in dup stdin for manager\n");
 
+	//start reading the input
 	if (fscanf(inFile, "%d\n", &num) == 0)
 		syserr("Error while reading number of expressions from the input file!\n");
 	qty = 0;
@@ -108,10 +119,11 @@ int main(const int argc, const char** argv) {
 				}
 		}
 
+		//less than n data chunks, can write more to the ring
 		if (i < num) {
 			if (fgets(input, INPUT_SIZE, inFile) == NULL)
 				syserr("Error while reading line %d [manager]\n", i);
-			sprintf(output, "%d: %s\n", i, input);	//FIXME remove the space
+			sprintf(output, "%d: %s\n", i, input);
 			if (write(STDOUT_FILENO, output, strlen(output) - 1) == -1)
 				syserr("Error while writing the line %d to the pipe [manager]\n", i);
 			++qty;
@@ -135,9 +147,5 @@ int main(const int argc, const char** argv) {
 
 	for (i = 0; i < n; ++i)
 		wait(0);
-
-	//FIXME this is done automatically
-	//close(STDIN_FILENO);
-	//close(STDOUT_FILENO);
 	return 0;
 }
