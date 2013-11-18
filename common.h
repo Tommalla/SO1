@@ -24,4 +24,6 @@ void readInput(char* output);
  */
 void calc(const char* input, char* output);
 
+int isDigit(const char c);
+
 #endif

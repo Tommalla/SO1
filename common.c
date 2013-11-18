@@ -8,7 +8,7 @@ void reread(char* buffer, size_t* size, int* id) {
 	*id = 0;
 }
 
-void readInput(char* output) {	//FIXME can use '\0' as the delimiter
+void readInput(char* output) {
 	static char buffer[BUFSIZ];
 	static int id = 0;
 	static size_t size = 0;
@@ -39,11 +39,13 @@ void calc(const char* input, char* output) {
 		fprintf(stderr, "Analyzing: %s[length=%d]\n", input, n);
 
 	for (i = 0; i < n - 1; ++i)	//find the first operator
-		if (('0' > input[i] || input[i] > '9') && input[i] != ' ' && input[i] != ':' &&
-			!(input[i] == '-' && i + 1 < n && input[i + 1] != ' '))
+		if (!isDigit(input[i]) && input[i] != ' ' && input[i] != ':' &&
+			!(input[i] == '-' && i + 1 < n - 1 && input[i + 1] != ' '))
 			break;
 
 	if (i == n - 1) {	//no operators left
+		if (debug)
+			fprintf(stderr, "No operators found! i = %d, n - 1 = %d\n", i, n - 1);
 		strcpy(output, input);
 		return;
 	}
@@ -63,9 +65,9 @@ void calc(const char* input, char* output) {
 
 	for (k = 1; k >= 0; --k) {
 		args[k] = 0;
-		for (; i >= 0 && ('0' > input[i] || input[i] > '9'); --i);	//iterate to the first digit
+		for (; i >= 0 && !isDigit(input[i]); --i);	//iterate to the first digit
 
-		for (mul = 1; i >= 0 && ('0' <= input[i] && input[i] <= '9'); --i) {	//through all the digits
+		for (mul = 1; i >= 0 && isDigit(input[i]); --i) {	//through all the digits
 			args[k] += (input[i] - '0') * mul;
 			mul *= 10;
 		}
@@ -116,3 +118,8 @@ void calc(const char* input, char* output) {
 	if (debug)
 		fprintf(stderr, "output: %s\n", output);
 }
+
+int isDigit(const char c) {
+	return '0' <= c && c <= '9';
+}
+

@@ -99,8 +99,9 @@ int main(const int argc, const char** argv) {
 
 			//analyze the input data:
 			for (t = s - 2, m = 1, u = 0; t >= 0; --t)
-				if (input[t] < '0' || input[t] > '9') {
-					if ((input[t] == ' ' && input[t - 1] == ':') || input[t] == '-') {
+				if (!isDigit(input[t])) {
+					if ((input[t] == ' ' && input[t - 1] == ':') || (input[t] == '-' &&
+						isDigit(input[t + 1])) ) {
 						//if a chunk is finished
 						input[t-1] = '\0';
 						m = atoi(input);
