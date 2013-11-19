@@ -2,7 +2,6 @@
  * Pierwsze zadanie zaliczeniowe z SO
  */
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include "err.h"
 #include "common.h"
@@ -11,8 +10,10 @@ char input[INPUT_SIZE];
 char output[INPUT_SIZE];
 
 int main() {
+	countfd();
 	while (1) {
 		readInput(input);
+		fprintf(stderr, "executor\n");
 		if (input[0] == '#') {
 			if (write(STDOUT_FILENO, "#\n", 2) == -1)
 				syserr("Error while passing the kill command [executor %d]\n", getpid());
@@ -26,6 +27,6 @@ int main() {
 		if (write(STDOUT_FILENO, output, strlen(output)) == -1)
 			syserr("Error while passing the results through pipe [executor %d]\n", getpid());
 	}
-	
+
 	return 0;
 }

@@ -5,6 +5,13 @@
 
 void reread(char* buffer, size_t* size, int* id) {
 	*size = read(STDIN_FILENO, buffer, BUFSIZ);
+	if (*size == -1)
+		syserr("Error on reading\n");
+	if (*size == 0)
+		syserr("Error on reading - one of the processes was closed prematurely\n");
+
+	fprintf(stderr, "Read: %d\n", *size);
+
 	*id = 0;
 }
 

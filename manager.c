@@ -3,9 +3,11 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <unistd.h>
 #include "common.h"
 #include "err.h"
 
@@ -40,11 +42,13 @@ int main(const int argc, const char** argv) {
 
 	//create the ring
 
-	if (pipe(pipe_dsc[1]) == -1)
+	if (pipe2(pipe_dsc[1], O_CLOEXEC) == -1)
 		syserr("Error in pipe for manager\n");
 
 	if (dup2(pipe_dsc[1][1], STDOUT_FILENO) == -1)
 		syserr("Error in dup stdout for manager\n");
+
+	countfd();
 
 	for (i = 0; i < n; ++i) {
 		//'rotate' pipes
@@ -52,7 +56,7 @@ int main(const int argc, const char** argv) {
 		pipe_dsc[0][1] = pipe_dsc[1][1];
 
 		//create the next pipe
-		if (pipe(pipe_dsc[1]) == -1)
+		if (pipe2(pipe_dsc[1], O_CLOEXEC) == -1)
 			syserr("Error in pipe for executor #%d\n", i);
 
 		//create the i-th executor
@@ -61,13 +65,19 @@ int main(const int argc, const char** argv) {
 				syserr("Error in fork for executor #%d\n", i);
 				break;
 			case 0:
-				close(pipe_dsc[0][1]);
-				close(pipe_dsc[1][0]);
+				fclose(inFile);
+				fclose(outFile);
+				//close(pipe_dsc[0][1]);
+				//close(pipe_dsc[1][0]);
 				if (dup2(pipe_dsc[0][0], STDIN_FILENO) == -1)
 					syserr("Error in dup stdin for executor %d\n", i);
 
+				//close(pipe_dsc[0][0]);
+
 				if (dup2(pipe_dsc[1][1], STDOUT_FILENO) == -1)
 					syserr("Error in dup stdout for executor %d\n", i);
+
+				//close(pipe_dsc[1][1]);
 
 				execl("executor", "executor", NULL);
 				syserr("Error in execl for executor #%d\n", i);
@@ -75,8 +85,8 @@ int main(const int argc, const char** argv) {
 		}
 
 		//close pipes we won't be using anymore (already copied by the last child)
-		close(pipe_dsc[0][0]);
-		close(pipe_dsc[0][1]);
+		//close(pipe_dsc[0][0]);
+		//close(pipe_dsc[0][1]);
 	}
 
 	//connect the n-1 -th executor to manager's input
@@ -95,6 +105,7 @@ int main(const int argc, const char** argv) {
 		while (qty >= n || (i >= num && qty > 0)) {	//already n data chunks in the ring
 			//hang up on reading (wait for the next chunk)
 			readInput(input);
+			fprintf(stderr, "manager\n");
 			s = strlen(input);
 
 			//analyze the input data:
@@ -125,6 +136,7 @@ int main(const int argc, const char** argv) {
 			if (fgets(input, INPUT_SIZE, inFile) == NULL)
 				syserr("Error while reading line %d [manager]\n", i);
 			sprintf(output, "%d: %s\n", i, input);
+			fprintf(stderr, "manager(write)\n");
 			if (write(STDOUT_FILENO, output, strlen(output) - 1) == -1)
 				syserr("Error while writing the line %d to the pipe [manager]\n", i);
 			++qty;
