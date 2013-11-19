@@ -1,12 +1,8 @@
 /* Tomasz Zakrzewski, tz336079
- * Pierwsze zadanie zaliczeniowe z SO
+ * SO2013 - First project
  */
 #ifndef COMMON_H
 #define COMMON_H
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 
 #define INPUT_SIZE 32768
 
@@ -28,20 +24,9 @@ void readInput(char* output);
  */
 void calc(const char* input, char* output);
 
+/**
+ * Returns 1 if c is a digit and 0 otherwise
+ */
 int isDigit(const char c);
-
-static inline void countfd() {
-	struct rlimit rlim;
-	int count, i, res;
-	res = 0;
-	//count = getrlimit(RLIMIT_NOFILE, &rlim);
-	for (i = 0; i < 30; ++i)
-		if (fcntl(i, F_GETFD) != -1) {
-			++res;
-			fprintf(stderr, "Open: %d\n", i);
-		}
-
-		fprintf(stderr, "Open descriptors: %d\n", res);
-}
 
 #endif

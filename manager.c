@@ -1,13 +1,13 @@
 /* Tomasz Zakrzewski, tz336079
- * Pierwsze zadanie zaliczeniowe z SO
+ * SO2013 - First project
  */
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
-#define _GNU_SOURCE
-#include <fcntl.h>
-#include <unistd.h>
 #include "common.h"
 #include "err.h"
 
@@ -15,7 +15,7 @@ const char* usage = "Usage: manager <number of processes> <input file> <output f
 
 char input[INPUT_SIZE];
 char output[INPUT_SIZE];
-int res[100000];
+int res[1000000];	//logical assumption - there won't be more input lines
 
 int main(const int argc, const char** argv) {
 	int n, qty, num, s, t, u, m;
@@ -48,8 +48,6 @@ int main(const int argc, const char** argv) {
 	if (dup2(pipe_dsc[1][1], STDOUT_FILENO) == -1)
 		syserr("Error in dup stdout for manager\n");
 
-	countfd();
-
 	for (i = 0; i < n; ++i) {
 		//'rotate' pipes
 		pipe_dsc[0][0] = pipe_dsc[1][0];
@@ -67,31 +65,30 @@ int main(const int argc, const char** argv) {
 			case 0:
 				fclose(inFile);
 				fclose(outFile);
-				//close(pipe_dsc[0][1]);
-				//close(pipe_dsc[1][0]);
 				if (dup2(pipe_dsc[0][0], STDIN_FILENO) == -1)
 					syserr("Error in dup stdin for executor %d\n", i);
 
-				//close(pipe_dsc[0][0]);
-
 				if (dup2(pipe_dsc[1][1], STDOUT_FILENO) == -1)
 					syserr("Error in dup stdout for executor %d\n", i);
-
-				//close(pipe_dsc[1][1]);
 
 				execl("executor", "executor", NULL);
 				syserr("Error in execl for executor #%d\n", i);
 				break;
 		}
 
+
 		//close pipes we won't be using anymore (already copied by the last child)
-		//close(pipe_dsc[0][0]);
-		//close(pipe_dsc[0][1]);
+		close(pipe_dsc[0][0]);
+		close(pipe_dsc[0][1]);
 	}
 
 	//connect the n-1 -th executor to manager's input
 	if (dup2(pipe_dsc[1][0], STDIN_FILENO) == -1)
 		syserr("Error in dup stdin for manager\n");
+
+	//close remaining unused pipes
+	close(pipe_dsc[1][1]);
+	close(pipe_dsc[1][0]);
 
 	//start reading the input
 	if (fscanf(inFile, "%d\n", &num) == 0)
@@ -105,7 +102,6 @@ int main(const int argc, const char** argv) {
 		while (qty >= n || (i >= num && qty > 0)) {	//already n data chunks in the ring
 			//hang up on reading (wait for the next chunk)
 			readInput(input);
-			fprintf(stderr, "manager\n");
 			s = strlen(input);
 
 			//analyze the input data:
@@ -120,12 +116,13 @@ int main(const int argc, const char** argv) {
 						--qty;
 						if (debug)
 							fprintf(stderr, "Manager: Saved the result of %d expr: %d\n", m, res[m]);
-					} else
+					} else	//a chunk isn't finished - pass it to the executors
 						if (write(STDOUT_FILENO, input, s) == -1)
 							syserr("Error while writing to the first pipe [manager]!\n");
 
-					break;
+					break;	//either way - break
 				} else {
+					//still parsing digits
 					u += (input[t] - '0') * m;
 					m *= 10;
 				}
@@ -136,7 +133,6 @@ int main(const int argc, const char** argv) {
 			if (fgets(input, INPUT_SIZE, inFile) == NULL)
 				syserr("Error while reading line %d [manager]\n", i);
 			sprintf(output, "%d: %s\n", i, input);
-			fprintf(stderr, "manager(write)\n");
 			if (write(STDOUT_FILENO, output, strlen(output) - 1) == -1)
 				syserr("Error while writing the line %d to the pipe [manager]\n", i);
 			++qty;

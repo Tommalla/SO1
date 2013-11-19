@@ -1,7 +1,11 @@
+/* Tomasz Zakrzewski, tz336079
+ * SO2013 - First project
+ */
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include "common.h"
+#include "err.h"
 
 void reread(char* buffer, size_t* size, int* id) {
 	*size = read(STDIN_FILENO, buffer, BUFSIZ);
@@ -9,9 +13,6 @@ void reread(char* buffer, size_t* size, int* id) {
 		syserr("Error on reading\n");
 	if (*size == 0)
 		syserr("Error on reading - one of the processes was closed prematurely\n");
-
-	fprintf(stderr, "Read: %d\n", *size);
-
 	*id = 0;
 }
 
@@ -22,6 +23,8 @@ void readInput(char* output) {
 
 	int outId;
 
+	//go through buffer (or read if it's the end of the buffer)
+	//until you find '\n'
 	outId = 0;
 	do {
 		++id;
@@ -32,7 +35,7 @@ void readInput(char* output) {
 
 	} while (buffer[id] != '\n');
 
-	output[outId] = '\0';
+	output[outId] = '\0';	//null-terminate
 }
 
 void calc(const char* input, char* output) {
@@ -62,7 +65,7 @@ void calc(const char* input, char* output) {
 	if (debug)
 		fprintf(stderr, "First operator (%c) at: %d\n", input[m], m);
 
-	//copy everything before and including ';' and one space after
+	//copy everything before and including ':' and one space after
 	for (j = 0; j < n && input[j] != ':'; ++j)
 		output[j] = input[j];
 
